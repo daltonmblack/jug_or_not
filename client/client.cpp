@@ -27,18 +27,45 @@ public:
 		     server_addr->ai_protocol);
     if (sock_fd < 0) {
       // TODO: come up with error-handling framework.
-      cerr << "socket() failed in Client::initialize() with error: " << strerror(errno) << endl;
+      cerr << "socket() failed in Client::start() with error: " << strerror(errno) << endl;
       return false;
     }
 
     res = connect(sock_fd, server_addr->ai_addr, server_addr->ai_addrlen);
     if (res) {
       // TODO: come up with error-handling framework.
-      cerr << "connect() failed in Client::initialize() with error: " << strerror(errno) << endl;
+      cerr << "connect() failed in Client::start() with error: " << strerror(errno) << endl;
       return false;
     }
 
     cout << "Successfully connected to the server!" << endl;
+
+    // Collect URL request from the user.
+    // TODO: eventually make this functionality accessible via a '-i' (interactive) flag.
+    string url;
+    cout << "Enter URL: ";
+    cin >> url;
+
+    // Send user's request to the proxy.
+    res = send(sock_fd, url.c_str(), url.size(), 0);
+    if (res < 0) {
+      cerr << "send() failed in Client::start() with error: " << strerror(errno) << endl;
+      return false;
+    }
+
+    // Wait for confirmation from the proxy.
+    size_t BUF_LEN = 100;
+    char buf[BUF_LEN];
+    res = recv(sock_fd, buf, BUF_LEN, 0);
+    if (res < 0) {
+      cerr << "recv() failed in Client::start() with error: " << strerror(errno) << endl;
+      return false;
+    } else if (res == 0) {
+      cout << "Proxy has closed the connection" << endl;
+    } else {
+      buf[res] = '\0';
+      cout << "Proxy responded with: " << buf << endl;
+    }
 
     close(sock_fd);
 
