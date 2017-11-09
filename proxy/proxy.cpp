@@ -31,9 +31,36 @@ void *accept_connections(void *helper_void) {
   socklen_t client_addr_size = sizeof(struct sockaddr_un);
   int client_fd = accept(sock_fd, (struct sockaddr *) &client_addr,
 			 &client_addr_size);
+
   if (client_fd < 0) {
     // TODO: figure out what to do here. This is bad.
     std::cerr << "accept() failed with error: " << strerror(errno) << std::endl;
+  }
+
+  std::cout << "Sucessfully accepted client!" << std::endl;
+
+  size_t BUF_LEN = 100;
+  char buf[BUF_LEN];
+  int res = recv(client_fd, buf, BUF_LEN, 0);
+  if (res < 0) {
+    std::cerr << "recv() failed with error: " << strerror(errno) << std::endl;
+    return NULL;
+  } else if (res == 0) {
+    std::cout << "Client closed its end of the connection." << std::endl;
+    return NULL;
+  }
+  for (int i = 0; i < res; i++) {
+    std::cout << "buf[" << i << "] = " << (char) buf[i] << std::endl;
+  }
+
+  buf[res] = '\0';
+  std::cout << "Client requested: " << buf << std::endl;
+
+  res = send(client_fd, "As you wish!", 12, 0);
+  if (res < 0) {
+    std::cout << "send() with error: " << strerror(errno) << std::endl;
+    return NULL;
+  } else if (res != 12) { // TODO: deal with partial send?
   }
 
   return NULL;
@@ -50,7 +77,7 @@ class Proxy {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // Fill in IP address in 'getaddrinfo()'
-    getaddrinfo(NULL, "1234", &hints, &addr_res);
+    getaddrinfo(NULL, port_num.c_str(), &hints, &addr_res);
 
     sock_fd = socket(addr_res->ai_family, addr_res->ai_socktype,
 			 addr_res->ai_protocol);
@@ -100,7 +127,7 @@ int main(int argc, char **argv) {
 
   std::cout << "Hello, world!" << std::endl;
 
-  Proxy prox("1234");
+  Proxy prox("20781");
   if (!prox.start()) {
     return EXIT_FAILURE;
   }
